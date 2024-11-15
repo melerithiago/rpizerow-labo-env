@@ -1,25 +1,29 @@
 from gpiozero import LED, Buzzer
-from time import sleep
+from signal import pause
 
-rojo = LED(19)
-verde = LED(13)
-azul = LED(26)
-buzz = Buzzer (22)
-
+bz = Buzzer(22)
+led_rojo = LED(19)
+led_verde = LED(26)
+led_azul = LED(13)
 while True:
-	comando = input ("Ingrese comando [buzz ; rgb , quit]:")
-	func = input ("Ingrese funcion [on ; off ; green ; red ; blue]:")
-	if  comando == 'buzz':
-		if func == 'on':
-			buzz.on()
-		if func == 'off':
-			buzz.off()
-	if comando == 'rgb':
-		if func == 'green':
-			verde.toggle()
-		if func == 'red':
-			rojo.toggle()
-		if func == 'blue':
-			azul.toggle()
-	if comando == 'quit':
-		break
+	comando = input("Ingrese comando: buzz o rgb: ")
+	if comando == "rgb":
+		opcion = input("Ingrese opcion: red, green or blue: ")
+	elif comando == "buzz":
+		opcion = input("Ingrese opcion: on u off: ")		
+
+	if comando == "buzz":
+		if opcion == "on":
+			bz.on()
+		elif opcion == "off":
+			bz.off()
+
+	elif comando == "rgb":
+		if opcion == "red":
+			led_rojo.toggle()
+		elif opcion == "green":
+			led_verde.toggle()
+		elif opcion == "blue":
+			led_azul.toggle()			
+
+pause()

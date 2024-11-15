@@ -1,54 +1,55 @@
-import os
-import time
-import ADS1x15
-import math
-from gpiozero import PWMLED
+import gpiozero
+import Adafruit_ADS1x15
 
-# choose your sensor
-# ADS = ADS1x15.ADS1013(1, 0x48)
-# ADS = ADS1x15.ADS1014(1, 0x48)
-# ADS = ADS1x15.ADS1015(1, 0x48)
-# ADS = ADS1x15.ADS1113(1, 0x48)
-# ADS = ADS1x15.ADS1114(1, 0x48)
+# Crear una instancia de ADC
+adc = Adafruit_ADS1x15.ADS1115()
 
-ADS = ADS1x15.ADS1115(1, 0x48)
+# Configuración de los pines GPIO para los LEDs
+red_led = PWMLED(17)
+blue_led = PWMLED(27)
 
-print(os.path.basename(_file_))
-print("ADS1X15_LIB_VERSION: {}".format(ADS1x15._version_))
+R_REF = 10000.0  # Resistencia de referencia en ohmios
+BETA = 3900.0    # Beta del termistor
 
-# set gain to 4.096V max
-ADS.setGain(ADS.PGA_4_096V)
-f = ADS.toVoltage()
+GAIN = 1
 
-k = 0.2
+def main():
+	while True:
+        	temp_setpoint = read_potentiometer()
+        	actual_temp = read_thermistor()
+        	control_leds(temp_setpoint, actual_temp)
+        	print(f"Setpoint: {temp_setpoint:.2f}°C, Actual: {actual_temp:.2f}°C")
+        	time.sleep(1)
 
-azul = PWMLED(26)
-rojo = PWMLED(19)
+def read_potentiometer():
+    	# Leer valor del potenciometro
+    	value = adc.read_adc(0, gain=GAIN)
+	# Escalar el valor a un rango de 0 a 30 grados
+    	temperature_setpoint = value * 30.0 / 32767.0
+    	return temperature_setpoint
 
-while True :
-    val_ter = ADS.readADC(1)
-    val_pot = ADS.readADC(3)
-    volt_term = val_ter * f
+def read_thermistor():
+   	# Leer valor del termistor
+	value = adc.read_adc(1, gain=GAIN)
+	# Convertir el valor del termistor a grados centígrados usando la ecuación de Steinhart-Hart
+	resistance = R_REF * (32767.0 / value - 1.0)
+	temperature = 1.0 / (1.0 / 298.15 + (1.0 / BETA) * (resistance / R_REF - 1.0)) - 273.15
+	return temperature
 
-    temp_pot = 30 * val_pot / 32767.5
-    res_ter = (volt_term * 10000) / (3.3 - volt_term)
-    temp_term = (298 * 3900) / (298 * math.log(res_ter / 10000) + 3900) - 273.15
+def control_leds(temp_setpoint, actual_temp):
+	difference = actual_temp - temp_setpoint
+	max_difference = 5.0
+	duty_cycle = min(abs(difference) / max_difference, 1.0)
 
-    print(temp_term)
-    print(temp_pot)
-
-    dif = temp_term - temp_pot
-
-    if dif > 0:
-        if dif >= 5:
-            dif = 5
-        azul.value = dif * k
-        rojo.off()
-    elif dif < 0:
-        if dif <= -5:
-            dif = -5
-        rojo.value = dif * k * -1
-        azul.off()
+	if difference > 0:
+		# Temperatura real está por encima del setpoint, encender LED azul
+		blue_led.value = duty_cycle
+        	red_led.value = 0
+    	else:
+        	# Temperatura real está por debajo del setpoint, encender LED rojo
+        	red_led.value = duty_cycle
+        	blue_led.value = 0
 
 
-    time.sleep(1)
+if __name__ == "__main__":
+	main()
